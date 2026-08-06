@@ -44,29 +44,43 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
       return;
     }
 
-    const { data: team } = await supabase.from('teams').select('id').eq('slug', teamSlug).single();
+    const { data: team, error: teamError } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('slug', teamSlug)
+      .single();
 
-    if (team) {
-      const { data: existingMember } = await supabase
+    if (teamError || !team) {
+      setStatus('error');
+      setErrorMessage(`Couldn't find team "${teamSlug}". Check the link you were given.`);
+      return;
+    }
+
+    const { data: existingMember } = await supabase
+      .from('members')
+      .select('id')
+      .eq('auth_user_id', data.user.id)
+      .eq('team_id', team.id)
+      .maybeSingle();
+
+    if (!existingMember) {
+      const { count } = await supabase
         .from('members')
-        .select('id')
-        .eq('auth_user_id', data.user.id)
-        .eq('team_id', team.id)
-        .maybeSingle();
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', team.id);
 
-      if (!existingMember) {
-        const { count } = await supabase
-          .from('members')
-          .select('id', { count: 'exact', head: true })
-          .eq('team_id', team.id);
+      const { error: insertError } = await supabase.from('members').insert({
+        auth_user_id: data.user.id,
+        team_id: team.id,
+        full_name: data.user.email?.split('@')[0] ?? 'New member',
+        roles: [],
+        is_coordinator: (count ?? 0) === 0,
+      });
 
-        await supabase.from('members').insert({
-          auth_user_id: data.user.id,
-          team_id: team.id,
-          full_name: data.user.email?.split('@')[0] ?? 'New member',
-          roles: [],
-          is_coordinator: (count ?? 0) === 0,
-        });
+      if (insertError) {
+        setStatus('error');
+        setErrorMessage(`Couldn't add you to this team: ${insertError.message}`);
+        return;
       }
     }
 
@@ -108,15 +122,15 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
         ) : (
           <form onSubmit={verifyCode} className="space-y-3">
             <p className="text-sm text-moss-600 mb-2">
-              Check your email for a 6-digit code and enter it below.
+              Check your email for a sign-in code and enter it below.
             </p>
             <input
               required
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="123456"
+              placeholder="Enter the code from your email"
               inputMode="numeric"
-              maxLength={6}
+              maxLength={8}
               className="w-full border border-moss-100 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-gold text-center text-lg tracking-widest"
             />
             <button
