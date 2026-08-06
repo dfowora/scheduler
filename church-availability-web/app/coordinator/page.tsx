@@ -15,7 +15,9 @@ export default async function CoordinatorPage() {
     .from('availability')
     .select('*, member:members(*)');
 
-  const { data: assignments } = await supabase.from('assignments').select('*');
+  const { data: assignments } = await supabase
+    .from('assignments')
+    .select('*, member:members(*)');
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-12">
@@ -27,7 +29,7 @@ export default async function CoordinatorPage() {
       <RosterGrid
         services={services ?? []}
         availability={(availability ?? []) as any}
-        assignments={assignments ?? []}
+        assignments={(assignments ?? []) as any}
       />
     </main>
   );
