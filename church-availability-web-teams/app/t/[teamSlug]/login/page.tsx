@@ -64,18 +64,20 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
       .maybeSingle();
 
     if (!existingMember) {
-      const { count } = await supabase
-        .from('members')
-        .select('id', { count: 'exact', head: true })
-        .eq('team_id', team.id);
-
-      const { error: insertError } = await supabase.from('members').insert({
-        auth_user_id: data.user.id,
-        team_id: team.id,
-        full_name: data.user.email?.split('@')[0] ?? 'New member',
-        roles: [],
-        is_coordinator: (count ?? 0) === 0,
+      const { data: memberCount } = await supabase.rpc('team_member_count', {
+        check_team_id: team.id,
       });
+
+      const { error: insertError } = await supabase.from('members').upsert(
+        {
+          auth_user_id: data.user.id,
+          team_id: team.id,
+          full_name: data.user.email?.split('@')[0] ?? 'New member',
+          roles: [],
+          is_coordinator: (memberCount ?? 0) === 0,
+        },
+        { onConflict: 'auth_user_id,team_id', ignoreDuplicates: true }
+      );
 
       if (insertError) {
         setStatus('error');
