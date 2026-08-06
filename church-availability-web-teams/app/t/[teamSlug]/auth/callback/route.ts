@@ -11,44 +11,51 @@ export async function GET(
   const supabase = await createClient();
 
   if (code) {
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    if (exchangeError) {
+      return NextResponse.redirect(
+        `${origin}/t/${teamSlug}/login?error=${encodeURIComponent(exchangeError.message)}`
+      );
+    }
   }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
-    const { data: team } = await supabase
-      .from('teams')
+  if (!user) {
+    return NextResponse.redirect(`${origin}/t/${teamSlug}/login?error=session_failed`);
+  }
+
+  const { data: team } = await supabase
+    .from('teams')
+    .select('id')
+    .eq('slug', teamSlug)
+    .single();
+
+  if (team) {
+    const { data: existingMember } = await supabase
+      .from('members')
       .select('id')
-      .eq('slug', teamSlug)
-      .single();
+      .eq('auth_user_id', user.id)
+      .eq('team_id', team.id)
+      .maybeSingle();
 
-    if (team) {
-      const { data: existingMember } = await supabase
+    if (!existingMember) {
+      const { count } = await supabase
         .from('members')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .eq('team_id', team.id)
-        .maybeSingle();
+        .select('id', { count: 'exact', head: true })
+        .eq('team_id', team.id);
 
-      if (!existingMember) {
-        const { count } = await supabase
-          .from('members')
-          .select('id', { count: 'exact', head: true })
-          .eq('team_id', team.id);
+      const isFirstMember = (count ?? 0) === 0;
 
-        const isFirstMember = (count ?? 0) === 0;
-
-        await supabase.from('members').insert({
-          auth_user_id: user.id,
-          team_id: team.id,
-          full_name: user.email?.split('@')[0] ?? 'New member',
-          roles: [],
-          is_coordinator: isFirstMember,
-        });
-      }
+      await supabase.from('members').insert({
+        auth_user_id: user.id,
+        team_id: team.id,
+        full_name: user.email?.split('@')[0] ?? 'New member',
+        roles: [],
+        is_coordinator: isFirstMember,
+      });
     }
   }
 

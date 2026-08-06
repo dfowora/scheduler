@@ -15,6 +15,10 @@ export default async function DashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect(`/t/${teamSlug}/login`);
+  }
+
   const { data: team } = await supabase
     .from('teams')
     .select('*')
@@ -28,9 +32,13 @@ export default async function DashboardPage({
   const { data: member } = await supabase
     .from('members')
     .select('*')
-    .eq('auth_user_id', user!.id)
+    .eq('auth_user_id', user.id)
     .eq('team_id', team.id)
     .single();
+
+  if (!member) {
+    redirect(`/t/${teamSlug}/login`);
+  }
 
   const { data: services } = await supabase
     .from('services')
@@ -42,13 +50,13 @@ export default async function DashboardPage({
   const { data: availability } = await supabase
     .from('availability')
     .select('*')
-    .eq('member_id', member?.id);
+    .eq('member_id', member.id);
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-12">
       <p className="text-xs uppercase tracking-[0.2em] text-gold mb-1">{team.name}</p>
 
-      {member?.is_coordinator && (
+      {member.is_coordinator && (
         <div className="mb-4">
           <a href={`/t/${teamSlug}/coordinator`} className="text-sm text-moss-600 underline">
             Go to coordinator view →
@@ -57,13 +65,13 @@ export default async function DashboardPage({
       )}
 
       <div className="mb-2 flex items-center gap-2">
-        <p className="text-xs uppercase tracking-[0.2em] text-moss-400">{member?.full_name}</p>
-        <NameEditor memberId={member!.id} currentName={member!.full_name} />
+        <p className="text-xs uppercase tracking-[0.2em] text-moss-400">{member.full_name}</p>
+        <NameEditor memberId={member.id} currentName={member.full_name} />
       </div>
 
       <h1 className="font-display text-3xl text-moss-900 mb-8">My availability</h1>
       <AvailabilityGrid
-        memberId={member?.id}
+        memberId={member.id}
         services={services ?? []}
         initialAvailability={availability ?? []}
       />

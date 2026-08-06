@@ -16,6 +16,10 @@ export default async function CoordinatorPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect(`/t/${teamSlug}/login`);
+  }
+
   const { data: team } = await supabase
     .from('teams')
     .select('*')
@@ -29,7 +33,7 @@ export default async function CoordinatorPage({
   const { data: currentMember } = await supabase
     .from('members')
     .select('is_coordinator')
-    .eq('auth_user_id', user!.id)
+    .eq('auth_user_id', user.id)
     .eq('team_id', team.id)
     .single();
 
