@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '../../../../../lib/supabase/server';
+
+export async function GET(request: Request, { params }: { params: { teamSlug: string } }) {
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get('code');
+  const supabase = await createClient();
+
+  if (code) {
+    await supabase.auth.exchangeCodeForSession(code);
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: team } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('slug', params.teamSlug)
+      .single();
+
+    if (team) {
+      const { data: existingMember } = await supabase
+        .from('members')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .eq('team_id', team.id)
+        .maybeSingle();
+
+      if (!existingMember) {
+        // First person to ever sign in to this team becomes its coordinator.
+        const { count } = await supabase
+          .from('members')
+          .select('id', { count: 'exact', head: true })
+          .eq('team_id', team.id);
+
+        const isFirstMember = (count ?? 0) === 0;
+
+        await supabase.from('members').insert({
+          auth_user_id: user.id,
+          team_id: team.id,
+          full_name: user.email?.split('@')[0] ?? 'New member',
+          roles: [],
+          is_coordinator: isFirstMember,
+        });
+      }
+    }
+  }
+
+  return NextResponse.redirect(`${origin}/t/${params.teamSlug}/dashboard`);
+}
