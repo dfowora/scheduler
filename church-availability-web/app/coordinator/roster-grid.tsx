@@ -50,6 +50,8 @@ export default function RosterGrid({
                   const isAssigned = assigned.some(
                     (a) => a.service_id === service.id && a.member_id === r.member_id
                   );
+                  const isUnavailable = r.status === 'unavailable';
+
                   return (
                     <div
                       key={r.id}
@@ -59,17 +61,24 @@ export default function RosterGrid({
                         <p className="text-sm font-medium text-ink">{r.member.full_name}</p>
                         <p className="text-xs text-moss-400 capitalize">{r.status}</p>
                       </div>
-                      <button
-                        onClick={() => assign(service.id, r.member_id, r.preferred_role ?? 'general')}
-                        disabled={isAssigned}
-                        className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-                          isAssigned
-                            ? 'bg-moss-50 text-moss-400'
-                            : 'bg-gold text-white hover:opacity-90'
-                        }`}
-                      >
-                        {isAssigned ? 'Assigned' : 'Assign'}
-                      </button>
+
+                      {isUnavailable ? (
+                        <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-moss-50 text-moss-400">
+                          Unavailable
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => assign(service.id, r.member_id, r.preferred_role ?? 'general')}
+                          disabled={isAssigned}
+                          className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                            isAssigned
+                              ? 'bg-moss-50 text-moss-400'
+                              : 'bg-gold text-white hover:opacity-90'
+                          }`}
+                        >
+                          {isAssigned ? 'Assigned' : 'Assign'}
+                        </button>
+                      )}
                     </div>
                   );
                 })}
