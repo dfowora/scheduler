@@ -1,22 +1,36 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { createClient } from '../../../../lib/supabase/client';
 
 export default function LoginPage({ params }: { params: Promise<{ teamSlug: string }> }) {
   const { teamSlug } = use(params);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   const supabase = createClient();
+
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const query = new URLSearchParams(window.location.search);
+
+    const hashError = hash.get('error_description') || hash.get('error');
+    const queryError = query.get('error');
+
+    if (hashError) setErrorMessage(decodeURIComponent(hashError.replace(/\+/g, ' ')));
+    else if (queryError) setErrorMessage(decodeURIComponent(queryError.replace(/\+/g, ' ')));
+  }, []);
 
   const sendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('sending');
+    setErrorMessage('');
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/t/${teamSlug}/auth/callback` },
     });
     setStatus(error ? 'error' : 'sent');
+    if (error) setErrorMessage(error.message);
   };
 
   return (
@@ -26,6 +40,12 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
         <h1 className="font-display text-4xl text-moss-900 mb-8">
           Let us know<br />when you're free.
         </h1>
+
+        {errorMessage && (
+          <p className="text-sm text-red-700 border border-red-200 bg-red-50 rounded-lg p-3 mb-4">
+            {errorMessage}
+          </p>
+        )}
 
         {status === 'sent' ? (
           <p className="text-moss-600 border border-moss-100 bg-moss-50 rounded-lg p-4">
@@ -48,9 +68,6 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
             >
               {status === 'sending' ? 'Sending...' : 'Send sign-in link'}
             </button>
-            {status === 'error' && (
-              <p className="text-sm text-red-700">Something went wrong. Try again.</p>
-            )}
           </form>
         )}
       </div>
