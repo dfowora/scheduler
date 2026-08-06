@@ -1,36 +1,76 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '../../../../lib/supabase/client';
 
 export default function LoginPage({ params }: { params: Promise<{ teamSlug: string }> }) {
   const { teamSlug } = use(params);
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [status, setStatus] = useState<'idle' | 'working' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const router = useRouter();
   const supabase = createClient();
 
-  useEffect(() => {
-    const hash = new URLSearchParams(window.location.hash.slice(1));
-    const query = new URLSearchParams(window.location.search);
-
-    const hashError = hash.get('error_description') || hash.get('error');
-    const queryError = query.get('error');
-
-    if (hashError) setErrorMessage(decodeURIComponent(hashError.replace(/\+/g, ' ')));
-    else if (queryError) setErrorMessage(decodeURIComponent(queryError.replace(/\+/g, ' ')));
-  }, []);
-
-  const sendLink = async (e: React.FormEvent) => {
+  const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('sending');
+    setStatus('working');
     setErrorMessage('');
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    setStatus('idle');
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+    setStep('code');
+  };
+
+  const verifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('working');
+    setErrorMessage('');
+
+    const { data, error } = await supabase.auth.verifyOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/t/${teamSlug}/auth/callback` },
+      token: code,
+      type: 'email',
     });
-    setStatus(error ? 'error' : 'sent');
-    if (error) setErrorMessage(error.message);
+
+    if (error || !data.user) {
+      setStatus('error');
+      setErrorMessage(error?.message ?? 'Invalid code. Try again.');
+      return;
+    }
+
+    const { data: team } = await supabase.from('teams').select('id').eq('slug', teamSlug).single();
+
+    if (team) {
+      const { data: existingMember } = await supabase
+        .from('members')
+        .select('id')
+        .eq('auth_user_id', data.user.id)
+        .eq('team_id', team.id)
+        .maybeSingle();
+
+      if (!existingMember) {
+        const { count } = await supabase
+          .from('members')
+          .select('id', { count: 'exact', head: true })
+          .eq('team_id', team.id);
+
+        await supabase.from('members').insert({
+          auth_user_id: data.user.id,
+          team_id: team.id,
+          full_name: data.user.email?.split('@')[0] ?? 'New member',
+          roles: [],
+          is_coordinator: (count ?? 0) === 0,
+        });
+      }
+    }
+
+    router.push(`/t/${teamSlug}/dashboard`);
   };
 
   return (
@@ -47,12 +87,8 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
           </p>
         )}
 
-        {status === 'sent' ? (
-          <p className="text-moss-600 border border-moss-100 bg-moss-50 rounded-lg p-4">
-            Check your email — we sent a sign-in link.
-          </p>
-        ) : (
-          <form onSubmit={sendLink} className="space-y-3">
+        {step === 'email' ? (
+          <form onSubmit={sendCode} className="space-y-3">
             <input
               type="email"
               required
@@ -63,10 +99,39 @@ export default function LoginPage({ params }: { params: Promise<{ teamSlug: stri
             />
             <button
               type="submit"
-              disabled={status === 'sending'}
+              disabled={status === 'working'}
               className="w-full bg-moss-600 text-parchment rounded-lg px-4 py-3 font-medium hover:bg-moss-900 transition-colors disabled:opacity-60"
             >
-              {status === 'sending' ? 'Sending...' : 'Send sign-in link'}
+              {status === 'working' ? 'Sending...' : 'Send sign-in code'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={verifyCode} className="space-y-3">
+            <p className="text-sm text-moss-600 mb-2">
+              Check your email for a 6-digit code and enter it below.
+            </p>
+            <input
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="123456"
+              inputMode="numeric"
+              maxLength={6}
+              className="w-full border border-moss-100 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-gold text-center text-lg tracking-widest"
+            />
+            <button
+              type="submit"
+              disabled={status === 'working'}
+              className="w-full bg-moss-600 text-parchment rounded-lg px-4 py-3 font-medium hover:bg-moss-900 transition-colors disabled:opacity-60"
+            >
+              {status === 'working' ? 'Verifying...' : 'Verify and sign in'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('email')}
+              className="w-full text-sm text-moss-400 underline"
+            >
+              Use a different email
             </button>
           </form>
         )}
