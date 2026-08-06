@@ -1,5 +1,6 @@
 import { createClient } from '../../lib/supabase/server';
 import AvailabilityGrid from './availability-grid';
+import NameEditor from './name-editor';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -27,9 +28,10 @@ export default async function DashboardPage() {
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-12">
-      <p className="text-xs uppercase tracking-[0.2em] text-moss-400 mb-2">
-        {member?.full_name}
-      </p>
+      <div className="mb-2 flex items-center gap-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-moss-400">{member?.full_name}</p>
+        <NameEditor memberId={member!.id} currentName={member!.full_name} />
+      </div>
       <h1 className="font-display text-3xl text-moss-900 mb-8">My availability</h1>
       <AvailabilityGrid
         memberId={member?.id}
