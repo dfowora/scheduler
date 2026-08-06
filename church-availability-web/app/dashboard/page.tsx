@@ -28,10 +28,19 @@ export default async function DashboardPage() {
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-12">
+      {member?.is_coordinator && (
+        <div className="mb-6">
+          <a href="/coordinator" className="text-sm text-moss-600 underline">
+            Go to coordinator view →
+          </a>
+        </div>
+      )}
+
       <div className="mb-2 flex items-center gap-2">
         <p className="text-xs uppercase tracking-[0.2em] text-moss-400">{member?.full_name}</p>
         <NameEditor memberId={member!.id} currentName={member!.full_name} />
       </div>
+
       <h1 className="font-display text-3xl text-moss-900 mb-8">My availability</h1>
       <AvailabilityGrid
         memberId={member?.id}

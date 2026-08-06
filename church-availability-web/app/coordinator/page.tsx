@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
 import RosterGrid from './roster-grid';
 import NewServiceForm from './new-service';
@@ -5,6 +6,20 @@ import DownloadPdfButton from './download-pdf-button';
 
 export default async function CoordinatorPage() {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: currentMember } = await supabase
+    .from('members')
+    .select('is_coordinator')
+    .eq('auth_user_id', user!.id)
+    .single();
+
+  if (!currentMember?.is_coordinator) {
+    redirect('/dashboard');
+  }
 
   const { data: services } = await supabase
     .from('services')
