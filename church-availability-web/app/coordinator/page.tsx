@@ -1,6 +1,7 @@
 import { createClient } from '../../lib/supabase/server';
 import RosterGrid from './roster-grid';
 import NewServiceForm from './new-service';
+import DownloadPdfButton from './download-pdf-button';
 
 export default async function CoordinatorPage() {
   const supabase = await createClient();
@@ -22,7 +23,13 @@ export default async function CoordinatorPage() {
   return (
     <main className="max-w-4xl mx-auto px-6 py-12">
       <p className="text-xs uppercase tracking-[0.2em] text-gold mb-2">Coordinator</p>
-      <h1 className="font-display text-3xl text-moss-900 mb-8">Build the roster</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-display text-3xl text-moss-900">Build the roster</h1>
+        <DownloadPdfButton
+          services={services ?? []}
+          assignments={(assignments ?? []) as any}
+        />
+      </div>
 
       <NewServiceForm />
 
