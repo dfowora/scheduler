@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { createClient } from '../../../../lib/supabase/client';
 
-export default function LoginPage({ params }: { params: { teamSlug: string } }) {
+export default function LoginPage({ params }: { params: Promise<{ teamSlug: string }> }) {
+  const { teamSlug } = use(params);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const supabase = createClient();
@@ -13,7 +14,7 @@ export default function LoginPage({ params }: { params: { teamSlug: string } }) 
     setStatus('sending');
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/t/${params.teamSlug}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/t/${teamSlug}/auth/callback` },
     });
     setStatus(error ? 'error' : 'sent');
   };

@@ -4,7 +4,12 @@ import RosterGrid from './roster-grid';
 import NewServiceForm from './new-service';
 import DownloadPdfButton from './download-pdf-button';
 
-export default async function CoordinatorPage({ params }: { params: { teamSlug: string } }) {
+export default async function CoordinatorPage({
+  params,
+}: {
+  params: Promise<{ teamSlug: string }>;
+}) {
+  const { teamSlug } = await params;
   const supabase = await createClient();
 
   const {
@@ -14,7 +19,7 @@ export default async function CoordinatorPage({ params }: { params: { teamSlug: 
   const { data: team } = await supabase
     .from('teams')
     .select('*')
-    .eq('slug', params.teamSlug)
+    .eq('slug', teamSlug)
     .single();
 
   if (!team) {
@@ -29,7 +34,7 @@ export default async function CoordinatorPage({ params }: { params: { teamSlug: 
     .single();
 
   if (!currentMember?.is_coordinator) {
-    redirect(`/t/${params.teamSlug}/dashboard`);
+    redirect(`/t/${teamSlug}/dashboard`);
   }
 
   const { data: services } = await supabase

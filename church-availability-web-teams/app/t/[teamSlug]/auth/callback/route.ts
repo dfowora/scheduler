@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '../../../../../lib/supabase/server';
 
-export async function GET(request: Request, { params }: { params: { teamSlug: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ teamSlug: string }> }
+) {
+  const { teamSlug } = await params;
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
   const supabase = await createClient();
@@ -18,7 +22,7 @@ export async function GET(request: Request, { params }: { params: { teamSlug: st
     const { data: team } = await supabase
       .from('teams')
       .select('id')
-      .eq('slug', params.teamSlug)
+      .eq('slug', teamSlug)
       .single();
 
     if (team) {
@@ -30,7 +34,6 @@ export async function GET(request: Request, { params }: { params: { teamSlug: st
         .maybeSingle();
 
       if (!existingMember) {
-        // First person to ever sign in to this team becomes its coordinator.
         const { count } = await supabase
           .from('members')
           .select('id', { count: 'exact', head: true })
@@ -49,5 +52,5 @@ export async function GET(request: Request, { params }: { params: { teamSlug: st
     }
   }
 
-  return NextResponse.redirect(`${origin}/t/${params.teamSlug}/dashboard`);
+  return NextResponse.redirect(`${origin}/t/${teamSlug}/dashboard`);
 }

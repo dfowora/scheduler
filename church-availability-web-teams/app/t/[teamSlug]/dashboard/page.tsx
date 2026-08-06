@@ -3,7 +3,12 @@ import { createClient } from '../../../../lib/supabase/server';
 import AvailabilityGrid from './availability-grid';
 import NameEditor from './name-editor';
 
-export default async function DashboardPage({ params }: { params: { teamSlug: string } }) {
+export default async function DashboardPage({
+  params,
+}: {
+  params: Promise<{ teamSlug: string }>;
+}) {
+  const { teamSlug } = await params;
   const supabase = await createClient();
 
   const {
@@ -13,7 +18,7 @@ export default async function DashboardPage({ params }: { params: { teamSlug: st
   const { data: team } = await supabase
     .from('teams')
     .select('*')
-    .eq('slug', params.teamSlug)
+    .eq('slug', teamSlug)
     .single();
 
   if (!team) {
@@ -45,7 +50,7 @@ export default async function DashboardPage({ params }: { params: { teamSlug: st
 
       {member?.is_coordinator && (
         <div className="mb-4">
-          <a href={`/t/${params.teamSlug}/coordinator`} className="text-sm text-moss-600 underline">
+          <a href={`/t/${teamSlug}/coordinator`} className="text-sm text-moss-600 underline">
             Go to coordinator view →
           </a>
         </div>
