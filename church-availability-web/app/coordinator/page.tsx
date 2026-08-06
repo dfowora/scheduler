@@ -2,7 +2,7 @@ import { createClient } from '../../lib/supabase/server';
 import RosterGrid from './roster-grid';
 
 export default async function CoordinatorPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: services } = await supabase
     .from('services')
