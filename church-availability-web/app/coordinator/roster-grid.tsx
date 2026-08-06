@@ -17,12 +17,18 @@ export default function RosterGrid({
   assignments: AssignmentWithMember[];
 }) {
   const [assigned, setAssigned] = useState<AssignmentWithMember[]>(assignments);
+  const [roleInputs, setRoleInputs] = useState<Record<string, string>>(
+    Object.fromEntries(availability.map((a) => [a.id, a.preferred_role ?? '']))
+  );
   const supabase = createClient();
 
-  const assign = async (serviceId: string, member: Member, role: string) => {
+  const assign = async (serviceId: string, member: Member, availabilityId: string) => {
+    const role = (roleInputs[availabilityId] || 'general').trim();
+
     await supabase
       .from('assignments')
       .upsert({ service_id: serviceId, member_id: member.id, role }, { onConflict: 'service_id,role' });
+
     setAssigned((prev) => [
       ...prev.filter((a) => !(a.service_id === serviceId && a.role === role)),
       {
@@ -81,29 +87,40 @@ export default function RosterGrid({
                   return (
                     <div
                       key={r.id}
-                      className="flex items-center justify-between px-4 py-3 border-b border-moss-100 last:border-b-0"
+                      className="flex items-center justify-between px-4 py-3 border-b border-moss-100 last:border-b-0 gap-3"
                     >
-                      <div>
-                        <p className="text-sm font-medium text-ink">{r.member.full_name}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-ink truncate">{r.member.full_name}</p>
                         <p className="text-xs text-moss-400 capitalize">{r.status}</p>
                       </div>
 
                       {isUnavailable ? (
-                        <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-moss-50 text-moss-400">
+                        <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-moss-50 text-moss-400 shrink-0">
                           Unavailable
                         </span>
                       ) : (
-                        <button
-                          onClick={() => assign(service.id, r.member, r.preferred_role ?? 'general')}
-                          disabled={isAssigned}
-                          className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
-                            isAssigned
-                              ? 'bg-moss-50 text-moss-400'
-                              : 'bg-gold text-white hover:opacity-90'
-                          }`}
-                        >
-                          {isAssigned ? 'Assigned' : 'Assign'}
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <input
+                            value={roleInputs[r.id] ?? ''}
+                            onChange={(e) =>
+                              setRoleInputs((prev) => ({ ...prev, [r.id]: e.target.value }))
+                            }
+                            placeholder="role"
+                            disabled={isAssigned}
+                            className="w-24 text-xs border border-moss-100 rounded-full px-3 py-1.5 disabled:opacity-50"
+                          />
+                          <button
+                            onClick={() => assign(service.id, r.member, r.id)}
+                            disabled={isAssigned}
+                            className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${
+                              isAssigned
+                                ? 'bg-moss-50 text-moss-400'
+                                : 'bg-gold text-white hover:opacity-90'
+                            }`}
+                          >
+                            {isAssigned ? 'Assigned' : 'Assign'}
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
