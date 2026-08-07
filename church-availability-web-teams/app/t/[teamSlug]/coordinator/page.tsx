@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '../../../../lib/supabase/server';
 import RosterGrid from './roster-grid';
 import NewServiceForm from './new-service';
+import CreateRosterForm from './create-roster';
 import DownloadPdfButton from './download-pdf-button';
 
 export default async function CoordinatorPage({
@@ -20,11 +21,7 @@ export default async function CoordinatorPage({
     redirect(`/t/${teamSlug}/login`);
   }
 
-  const { data: team } = await supabase
-    .from('teams')
-    .select('*')
-    .eq('slug', teamSlug)
-    .single();
+  const { data: team } = await supabase.from('teams').select('*').eq('slug', teamSlug).single();
 
   if (!team) {
     redirect('/');
@@ -40,6 +37,12 @@ export default async function CoordinatorPage({
   if (!currentMember?.is_coordinator) {
     redirect(`/t/${teamSlug}/dashboard`);
   }
+
+  const { data: rosters } = await supabase
+    .from('rosters')
+    .select('*')
+    .eq('team_id', team.id)
+    .order('created_at', { ascending: true });
 
   const { data: services } = await supabase
     .from('services')
@@ -65,14 +68,17 @@ export default async function CoordinatorPage({
         <h1 className="font-display text-3xl text-moss-900">Build the roster</h1>
         <DownloadPdfButton
           teamName={team.name}
+          rosters={rosters ?? []}
           services={services ?? []}
           assignments={(assignments ?? []) as any}
         />
       </div>
 
-      <NewServiceForm teamId={team.id} />
+      <CreateRosterForm teamId={team.id} />
+      <NewServiceForm teamId={team.id} rosters={rosters ?? []} />
 
       <RosterGrid
+        rosters={rosters ?? []}
         services={services ?? []}
         availability={(availability ?? []) as any}
         assignments={(assignments ?? []) as any}

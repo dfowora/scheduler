@@ -7,6 +7,13 @@ export interface Team {
   created_at: string;
 }
 
+export interface Roster {
+  id: string;
+  team_id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Member {
   id: string;
   auth_user_id: string;
@@ -20,6 +27,7 @@ export interface Member {
 export interface Service {
   id: string;
   team_id: string;
+  roster_id: string | null;
   service_date: string;
   service_time: string;
   title: string;
