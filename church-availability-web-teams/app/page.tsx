@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '../lib/supabase/server';
 import SignOutButton from './sign-out-button';
@@ -31,7 +32,7 @@ export default async function Home() {
       ) : (
         <div className="space-y-2 mb-8">
           {memberships.map((m: any) => (
-            
+            <Link
               key={m.id}
               href={`/t/${m.team.slug}/dashboard`}
               className="block border border-moss-100 rounded-lg px-4 py-3 bg-white hover:bg-moss-50 transition-colors"
@@ -40,17 +41,17 @@ export default async function Home() {
               {m.is_coordinator && (
                 <span className="ml-2 text-xs text-gold uppercase tracking-wide">Coordinator</span>
               )}
-            </a>
+            </Link>
           ))}
         </div>
       )}
 
-      
+      <Link
         href="/new-team"
         className="inline-block bg-moss-600 text-parchment rounded-lg px-5 py-3 font-medium hover:bg-moss-900 transition-colors"
       >
         Create a new team
-      </a>
+      </Link>
     </main>
   );
 }
