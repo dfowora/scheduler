@@ -30,15 +30,15 @@ export default async function DashboardPage({
   }
 
   const { data: member } = await supabase
-    .from('members')
-    .select('*')
-    .eq('auth_user_id', user.id)
-    .eq('team_id', team.id)
-    .single();
+      .from('members')
+      .select('*')
+      .eq('auth_user_id', user.id)
+      .eq('team_id', team.id)
+      .single();
 
-  if (!member) {
-    redirect(`/t/${teamSlug}/login`);
-  }
+    if (!member) {
+      redirect(`/t/${teamSlug}/join`);
+    }
 
   const { data: services } = await supabase
     .from('services')
